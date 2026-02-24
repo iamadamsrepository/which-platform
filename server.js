@@ -43,12 +43,9 @@ app.get('/api/departures', async (req, res) => {
       calcNumberOfTrips: numTrips,
       TfNSWTR: 'true',
       version: '10.2.1.42',
-      excludedMeans: 'checkbox',
-      exclMOT_4: '1',   // exclude light rail
-      exclMOT_5: '1',   // exclude bus
-      exclMOT_7: '1',   // exclude coach
-      exclMOT_9: '1',   // exclude ferry
-      exclMOT_11: '1',  // exclude school bus
+      includedMeans: 'checkbox',
+      inclMOT_1: '1',   // trains only
+      inclMOT_2: '1',   // metro
     });
 
     const url = `${TFNSW_BASE}/trip?${params}`;

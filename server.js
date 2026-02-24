@@ -22,8 +22,13 @@ app.get('/api/departures', async (req, res) => {
     const numTrips = req.query.count || 10;
 
     const now = new Date();
-    const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
-    const timeStr = now.toTimeString().slice(0, 5).replace(':', '');
+    // Always use Sydney time (Vercel servers may be in UTC)
+    const sydDate = now.toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' }); // YYYY-MM-DD
+    const dateStr = sydDate.replace(/-/g, '');
+    const sydTime = now.toLocaleTimeString('en-GB', {
+      timeZone: 'Australia/Sydney', hour: '2-digit', minute: '2-digit', hour12: false
+    });
+    const timeStr = sydTime.replace(':', '');
 
     const params = new URLSearchParams({
       outputFormat: 'rapidJSON',

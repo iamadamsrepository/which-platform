@@ -211,12 +211,14 @@ function renderDepartures() {
   let html = '';
 
   if (nextCatchable) {
+    const bannerPlatform = nextCatchable.platform !== '?' ? `Platform ${nextCatchable.platform.replace('Platform ', '')} · ` : '';
+    const bannerBoarding = nextCatchable.boardingStation ? ` · from ${nextCatchable.boardingStation}` : '';
     html += `
       <div class="next-train-banner">
         <div class="label">Next catchable train</div>
         <div class="detail">
-          Platform ${nextCatchable.platform.replace('Platform ', '')} · ${nextCatchable.line} · ${nextCatchable.departureTimeLocal}
-          (${nextCatchable.minutesUntilDeparture} min)
+          ${bannerPlatform}${nextCatchable.line} · ${nextCatchable.departureTimeLocal}
+          (${nextCatchable.minutesUntilDeparture} min)${bannerBoarding}
         </div>
       </div>`;
   }
@@ -238,6 +240,9 @@ function renderDepartures() {
     }
     if (dep.delayMinutes > 0) {
       metaHtml += `<span class="delay-info">+${dep.delayMinutes}m late</span>`;
+    }
+    if (dep.boardingStation) {
+      metaHtml += `<span class="boarding-badge">board at ${dep.boardingStation.replace(/ Station.*/, '')}</span>`;
     }
     if (dep.interchanges > 0) {
       metaHtml += `<span class="interchange-badge">${dep.interchanges} change</span>`;
@@ -279,8 +284,12 @@ function renderDepartures() {
 
 // ─── Line colour class ──────────────────────────────────────────────────────
 function getLineClass(line) {
-  const match = line.match(/T\d+/);
-  if (match) return `line-${match[0]}`;
+  const trainMatch = line.match(/T\d+/);
+  if (trainMatch) return `line-${trainMatch[0]}`;
+  const metroMatch = line.match(/M\d+/);
+  if (metroMatch) return `line-${metroMatch[0]}`;
+  const lrMatch = line.match(/L\d+/);
+  if (lrMatch) return `line-${lrMatch[0]}`;
   return 'line-default';
 }
 

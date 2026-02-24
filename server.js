@@ -117,74 +117,87 @@ function parseDepartures(data, now) {
     const legs = journey.legs || [];
     if (!legs.length) return null;
 
-    // Find the first train leg (product class 1 = Sydney Trains)
-    // Skip walking legs (class 99/100) and non-train legs (bus=5, light rail=4, etc.)
-    const trainLegIndex = legs.findIndex(leg => {
+    // Classify legs: walking (99/100), train (1), metro (2), light rail (4), bus (5)
+    const transitLegs = legs.filter(leg => {
       const cls = leg.transportation?.product?.class;
-      return cls === 1;
+      return cls && cls !== 99 && cls !== 100; // exclude walking
     });
 
-    // No train leg in this journey → skip it entirely
-    if (trainLegIndex === -1) return null;
+    // Must have at least one rail transit leg (train=1 or metro=2)
+    const hasRail = legs.some(leg => {
+      const cls = leg.transportation?.product?.class;
+      return cls === 1 || cls === 2;
+    });
+    if (!hasRail) return null;
 
-    const trainLeg = legs[trainLegIndex];
+    // First leg = journey start (departure time, even if walking)
+    const firstLeg = legs[0];
     const lastLeg = legs[legs.length - 1];
 
-    const origin = trainLeg.origin || {};
-    const destination = lastLeg.destination || {};
-    const transport = trainLeg.transportation || {};
-    const originProps = origin.properties || {};
-    const destProps = destination.properties || {};
+    // First non-walking leg = the one with line & platform info
+    const boardingLeg = transitLegs[0] || firstLeg;
+    const boardingTransport = boardingLeg.transportation || {};
+    const boardingOrigin = boardingLeg.origin || {};
+    const boardingOriginProps = boardingOrigin.properties || {};
 
-    // Departure time (prefer estimated/real-time, fall back to planned)
-    const depTimeStr = origin.departureTimeEstimated || origin.departureTimePlanned;
-    const arrTimeStr = destination.arrivalTimeEstimated || destination.arrivalTimePlanned;
+    // Journey start & end
+    const journeyOrigin = firstLeg.origin || {};
+    const journeyDest = lastLeg.destination || {};
+    const destProps = journeyDest.properties || {};
+
+    // Departure = when you leave the origin station (first leg)
+    const depTimeStr = journeyOrigin.departureTimeEstimated || journeyOrigin.departureTimePlanned;
+    const arrTimeStr = journeyDest.arrivalTimeEstimated || journeyDest.arrivalTimePlanned;
     const depTime = depTimeStr ? new Date(depTimeStr) : null;
     const arrTime = arrTimeStr ? new Date(arrTimeStr) : null;
 
-    // Is there a delay?
-    const plannedDep = origin.departureTimePlanned ? new Date(origin.departureTimePlanned) : null;
-    const delayMinutes = (depTime && plannedDep)
-      ? Math.round((depTime - plannedDep) / 60000)
+    // Delay on the boarding leg
+    const plannedDep = boardingOrigin.departureTimePlanned ? new Date(boardingOrigin.departureTimePlanned) : null;
+    const actualDep = boardingOrigin.departureTimeEstimated ? new Date(boardingOrigin.departureTimeEstimated) : null;
+    const delayMinutes = (actualDep && plannedDep)
+      ? Math.round((actualDep - plannedDep) / 60000)
       : 0;
 
-    // Minutes until departure
+    // Minutes until you need to leave
     const minsUntil = depTime ? Math.round((depTime - now) / 60000) : null;
 
-    // Journey duration in minutes
+    // Total journey duration
     const durationMins = (depTime && arrTime) ? Math.round((arrTime - depTime) / 60000) : null;
 
-    // Line info
-    const lineName = transport.disassembledName || '?';
-    const lineNumber = transport.number || '';
-    const trainDest = transport.destination ? transport.destination.name : '';
+    // Line info from boarding leg
+    const lineName = boardingTransport.disassembledName || '?';
+    const lineNumber = boardingTransport.number || '';
+    const trainDest = boardingTransport.destination ? boardingTransport.destination.name : '';
 
-    // Platform at origin
-    const platform = originProps.platformName || originProps.stoppingPointPlanned || '?';
+    // Platform you board at
+    const platform = boardingOriginProps.platformName || boardingOriginProps.stoppingPointPlanned || '?';
 
-    // Platform at destination
+    // Where you board (station name, useful if it's not the origin)
+    const boardingStation = boardingOrigin.disassembledName || '';
+
+    // Platform at final destination
     const arrivalPlatform = destProps.platformName || destProps.stoppingPointPlanned || '?';
 
     // Real-time status
-    const isRealtime = trainLeg.realtimeStatus && trainLeg.realtimeStatus.includes('MONITORED');
+    const isRealtime = boardingLeg.realtimeStatus && boardingLeg.realtimeStatus.includes('MONITORED');
 
     // Interchanges
     const interchanges = journey.interchanges || 0;
 
-    // Count stops (only train legs, not walking/bus transfers)
+    // Count stops (only rail legs: train + metro)
     let totalStops = 0;
     for (const leg of legs) {
       const cls = leg.transportation?.product?.class;
-      if (cls === 1) {
+      if (cls === 1 || cls === 2) {
         const seq = leg.stopSequence || [];
         if (seq.length > 1) totalStops += seq.length - 1;
       }
     }
 
-    // Build interchange details if needed
+    // Build interchange details
     let interchangeDetails = [];
     if (interchanges > 0) {
-      interchangeDetails = legs.slice(1).map(leg => {
+      interchangeDetails = transitLegs.slice(1).map(leg => {
         const t = leg.transportation || {};
         const o = leg.origin || {};
         return {
@@ -199,6 +212,7 @@ function parseDepartures(data, now) {
       line: lineName,
       lineNumber,
       trainDestination: trainDest,
+      boardingStation,
       departureTime: depTimeStr,
       arrivalTime: arrTimeStr,
       departureTimeLocal: depTime ? depTime.toLocaleTimeString('en-AU', {

@@ -353,7 +353,24 @@ main {
 .line-T7 { background: #6f818e; }
 .line-T8 { background: #00954c; }
 .line-T9 { background: #d11f2f; }
+
+/* Sydney Metro */
+.line-M1 { background: #009b77; }
+
+/* Light Rail */
+.line-L1 { background: #ee343f; }
+.line-L2 { background: #ee343f; }
+.line-L3 { background: #ee343f; }
+
 .line-default { background: #555; }
+
+.boarding-badge {
+  font-size: 0.7rem;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(0, 155, 119, 0.18);
+  color: #6fc;
+}
 
 .train-dest {
   font-size: 0.8rem;

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#1a1a2e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Which Platform?">
+  <title>Which Platform?</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <div class="header-top">
+        <div class="title-group">
+          <h1>Which Platform?</h1>
+          <span class="subtitle">Sydney Trains</span>
+        </div>
+        <div class="header-actions">
+          <button id="refreshBtn" class="icon-btn" title="Refresh now">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="23 4 23 10 17 10"></polyline>
+              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+            </svg>
+          </button>
+          <button id="settingsBtn" class="icon-btn" title="Settings">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="route-info">
+        <span class="station-name" id="originName">Wynyard</span>
+        <button id="swapBtn" class="swap-btn" title="Swap direction">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="17 1 21 5 17 9"></polyline>
+            <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+            <polyline points="7 23 3 19 7 15"></polyline>
+            <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+          </svg>
+        </button>
+        <span class="station-name" id="destName">Redfern</span>
+      </div>
+      <div class="status-bar">
+        <span id="lastUpdate" class="update-time">Loading...</span>
+        <span id="walkTime" class="walk-time">🚶 5 min to platform</span>
+      </div>
+    </header>
+
+    <main>
+      <div id="loading" class="loading">
+        <div class="spinner"></div>
+        <p>Fetching departures...</p>
+      </div>
+
+      <div id="error" class="error" style="display:none">
+        <p>⚠️ Could not load departures</p>
+        <button onclick="fetchDepartures()">Try Again</button>
+      </div>
+
+      <div id="departures" class="departures-list"></div>
+    </main>
+
+    <footer>
+      <p>Auto-refreshes every 30s · Data from TfNSW</p>
+    </footer>
+
+    <!-- Settings Panel -->
+    <div id="settingsPanel" class="settings-panel" style="display:none">
+      <div class="settings-content">
+        <div class="settings-header">
+          <h2>⚙️ Settings</h2>
+          <button id="settingsClose" class="icon-btn" title="Close">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <div class="settings-section">
+          <h3>Saved Stations</h3>
+          <div class="setting-row">
+            <label>🏠 Home Station</label>
+            <div class="saved-station-row" id="homeSavedRow">
+              <span class="saved-value" id="homeStationLabel">Not set</span>
+              <button class="edit-btn" id="homeEditBtn" title="Edit">Edit</button>
+            </div>
+            <div class="edit-station-row" id="homeEditRow" style="display:none">
+              <input type="text" id="homeStation" placeholder="Search station..." autocomplete="off">
+              <button class="cancel-edit-btn" id="homeCancelBtn">✕</button>
+            </div>
+            <div id="homeResults" class="search-results"></div>
+            <input type="hidden" id="homeStationId">
+          </div>
+          <div class="setting-row">
+            <label>💼 Work Station</label>
+            <div class="saved-station-row" id="workSavedRow">
+              <span class="saved-value" id="workStationLabel">Not set</span>
+              <button class="edit-btn" id="workEditBtn" title="Edit">Edit</button>
+            </div>
+            <div class="edit-station-row" id="workEditRow" style="display:none">
+              <input type="text" id="workStation" placeholder="Search station..." autocomplete="off">
+              <button class="cancel-edit-btn" id="workCancelBtn">✕</button>
+            </div>
+            <div id="workResults" class="search-results"></div>
+            <input type="hidden" id="workStationId">
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h3>Current Route</h3>
+          <div class="setting-row">
+            <label for="sourceStation">📍 Source Station</label>
+            <input type="text" id="sourceStation" placeholder="Search station..." autocomplete="off">
+            <div id="sourceResults" class="search-results"></div>
+            <input type="hidden" id="sourceStationId">
+            <span class="selected-station" id="sourceStationLabel"></span>
+          </div>
+          <div class="setting-row">
+            <label for="destStation">🎯 Destination Station</label>
+            <input type="text" id="destStation" placeholder="Search station..." autocomplete="off">
+            <div id="destResults" class="search-results"></div>
+            <input type="hidden" id="destStationId">
+            <span class="selected-station" id="destStationLabel"></span>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h3>Quick Routes</h3>
+          <div class="quick-actions">
+            <button id="btnHomeToWork" class="action-btn">🏠 → 💼 Home to Work</button>
+            <button id="btnWorkToHome" class="action-btn">💼 → 🏠 Work to Home</button>
+            <button id="btnSwap" class="action-btn">🔄 Swap Source & Dest</button>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h3>Walk Time</h3>
+          <div class="setting-row walk-time-row">
+            <label for="walkMinutes">Minutes to platform</label>
+            <input type="number" id="walkMinutes" min="0" max="30" value="5">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

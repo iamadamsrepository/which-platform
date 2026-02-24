@@ -115,13 +115,24 @@ function parseDepartures(data, now) {
 
   return journeys.map(journey => {
     const legs = journey.legs || [];
-    const firstLeg = legs[0];
-    const lastLeg = legs[legs.length - 1];
-    if (!firstLeg) return null;
+    if (!legs.length) return null;
 
-    const origin = firstLeg.origin || {};
+    // Find the first train leg (product class 1 = Sydney Trains)
+    // Skip walking legs (class 99/100) and non-train legs (bus=5, light rail=4, etc.)
+    const trainLegIndex = legs.findIndex(leg => {
+      const cls = leg.transportation?.product?.class;
+      return cls === 1;
+    });
+
+    // No train leg in this journey → skip it entirely
+    if (trainLegIndex === -1) return null;
+
+    const trainLeg = legs[trainLegIndex];
+    const lastLeg = legs[legs.length - 1];
+
+    const origin = trainLeg.origin || {};
     const destination = lastLeg.destination || {};
-    const transport = firstLeg.transportation || {};
+    const transport = trainLeg.transportation || {};
     const originProps = origin.properties || {};
     const destProps = destination.properties || {};
 
@@ -155,16 +166,19 @@ function parseDepartures(data, now) {
     const arrivalPlatform = destProps.platformName || destProps.stoppingPointPlanned || '?';
 
     // Real-time status
-    const isRealtime = firstLeg.realtimeStatus && firstLeg.realtimeStatus.includes('MONITORED');
+    const isRealtime = trainLeg.realtimeStatus && trainLeg.realtimeStatus.includes('MONITORED');
 
     // Interchanges
     const interchanges = journey.interchanges || 0;
 
-    // Count stops (from stopSequence in each leg, minus 1 per leg for origin)
+    // Count stops (only train legs, not walking/bus transfers)
     let totalStops = 0;
     for (const leg of legs) {
-      const seq = leg.stopSequence || [];
-      if (seq.length > 1) totalStops += seq.length - 1; // exclude origin stop
+      const cls = leg.transportation?.product?.class;
+      if (cls === 1) {
+        const seq = leg.stopSequence || [];
+        if (seq.length > 1) totalStops += seq.length - 1;
+      }
     }
 
     // Build interchange details if needed

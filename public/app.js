@@ -9,7 +9,6 @@ const DEFAULTS = {
   originName: 'Wynyard',
   destId: '201510',
   destName: 'Redfern',
-  walkMinutes: 5,
 };
 
 // ─── State ──────────────────────────────────────────────────────────────────
@@ -26,7 +25,6 @@ const $lastUpdate = document.getElementById('lastUpdate');
 const $refreshBtn = document.getElementById('refreshBtn');
 const $originName = document.getElementById('originName');
 const $destName = document.getElementById('destName');
-const $walkTime = document.getElementById('walkTime');
 
 // Header swap button
 const $swapBtn = document.getElementById('swapBtn');
@@ -54,7 +52,6 @@ const $destStationLabel = document.getElementById('destStationLabel');
 const $btnHomeToWork = document.getElementById('btnHomeToWork');
 const $btnWorkToHome = document.getElementById('btnWorkToHome');
 const $btnSwap = document.getElementById('btnSwap');
-const $walkMinutes = document.getElementById('walkMinutes');
 
 // Home/Work edit toggle elements
 const $homeSavedRow = document.getElementById('homeSavedRow');
@@ -85,8 +82,6 @@ function saveSettings() {
 function applySettings() {
   $originName.textContent = settings.originName;
   $destName.textContent = settings.destName;
-  $walkTime.textContent = `🚶 ${settings.walkMinutes} min to platform`;
-  $walkMinutes.value = settings.walkMinutes;
 
   // Show saved home/work in labels
   if (settings.homeName) {
@@ -185,7 +180,6 @@ function renderDepartures() {
   }
 
   const now = new Date();
-  const walkMins = settings.walkMinutes;
 
   const updated = departures.map(d => {
     const depTime = new Date(d.departureTime);
@@ -193,7 +187,6 @@ function renderDepartures() {
     return {
       ...d,
       minutesUntilDeparture: minsUntil,
-      catchable: minsUntil > walkMins,
     };
   }).filter(d => d.minutesUntilDeparture >= 0);
 
@@ -206,25 +199,9 @@ function renderDepartures() {
     return;
   }
 
-  const nextCatchable = updated.find(d => d.catchable);
-
   let html = '';
 
-  if (nextCatchable) {
-    const bannerPlatform = nextCatchable.platform !== '?' ? `Platform ${nextCatchable.platform.replace('Platform ', '')} · ` : '';
-    const bannerBoarding = nextCatchable.boardingStation ? ` · from ${nextCatchable.boardingStation}` : '';
-    html += `
-      <div class="next-train-banner">
-        <div class="label">Next catchable train</div>
-        <div class="detail">
-          ${bannerPlatform}${nextCatchable.line} · ${nextCatchable.departureTimeLocal}
-          (${nextCatchable.minutesUntilDeparture} min)${bannerBoarding}
-        </div>
-      </div>`;
-  }
-
   updated.forEach(dep => {
-    const catchableClass = dep.catchable ? 'catchable' : 'not-catchable';
     const platformNum = dep.platform.replace('Platform ', '');
     const lineClass = getLineClass(dep.line);
 
@@ -256,7 +233,7 @@ function renderDepartures() {
     metaHtml += `<span class="arr-time">arr ${dep.arrivalTimeLocal}</span>`;
 
     html += `
-      <div class="departure-card ${catchableClass}">
+      <div class="departure-card">
         <div class="card-top">
           <div class="time-section">
             <span class="dep-time">${dep.departureTimeLocal}</span>
@@ -444,16 +421,6 @@ $swapBtn.addEventListener('click', () => {
 function swapRoute() {
   setRouteAndRefresh(settings.destId, settings.destName, settings.originId, settings.originName);
 }
-
-$walkMinutes.addEventListener('change', () => {
-  const val = parseInt($walkMinutes.value, 10);
-  if (!isNaN(val) && val >= 0 && val <= 30) {
-    settings.walkMinutes = val;
-    saveSettings();
-    applySettings();
-    renderDepartures();
-  }
-});
 
 // ─── Timers ─────────────────────────────────────────────────────────────────
 function resetRefreshTimer() {

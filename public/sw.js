@@ -1,4 +1,4 @@
-const CACHE_NAME = 'whichplatform-v7';
+const CACHE_NAME = 'whichplatform-v8';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

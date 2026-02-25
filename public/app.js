@@ -249,9 +249,9 @@ function renderDepartures() {
             <span class="line-badge ${lineClass}">${dep.line}</span>
             <span class="train-dest">${dep.trainDestination}</span>
           </div>
-          <div class="trip-details">
-            ${metaHtml}
-          </div>
+        </div>
+        <div class="trip-details">
+          ${metaHtml}
         </div>
       </div>`;
   });
